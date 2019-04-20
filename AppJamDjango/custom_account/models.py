@@ -8,7 +8,7 @@ class Profile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE
     )
-    name = models.CharField(max_length=20, blank=False)
+    nickname = models.CharField(max_length=20, blank=False)
     group = models.OneToOneField(
-        Group, on_delete=models.CASCADE
+        Group, on_delete=models.CASCADE, null=True
     )

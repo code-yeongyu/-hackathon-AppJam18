@@ -10,6 +10,8 @@ from rest_framework.response import Response
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from rest_framework.views import APIView
 
+from custom_account.models import Profile
+from AppJamDjango import settings
 from articles.models import Article, Image
 from articles.serializers import ArticleSerializer, ImageSerializer
 
@@ -29,14 +31,22 @@ class ArticleList(APIView):
             return False
 
     def post(self, request):  # 에러 테스트 필요함
-        if request.user.is_authenticated and request.user.group != None:  # 사용자가 인증 되었을경우
+        if request.user.is_authenticated:  # 사용자가 인증 되었을경우
             serializer = ArticleSerializer(data=request.data)
+            try:
+                profile = Profile.objects.get(user=request.user)
+            except:
+                Profile.objects.create(user=request.user)
+                profile = Profile.objects.get(user=request.user)
             for temp in json.loads(
                     request.data.get('images_id')):  # 이미지의 id값들이 유효한지 체크
                 if not self._is_image_available(temp):  # 잘못된 id값을 받았을 경우
                     return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
             if serializer.is_valid():
-                serializer.save(writer=request.user)  # 작성자 요청자로 설정
+                import pdb
+                pdb.set_trace()
+                serializer.save(writer=request.user,
+                                group=profile.group)  # 작성자 요청자로 설정
                 return JsonResponse(
                     serializer.data, status=status.HTTP_201_CREATED)
             return Response(
@@ -45,8 +55,14 @@ class ArticleList(APIView):
         return Response(status=status.HTTP_401_UNAUTHORIZED)  # 인증되지 않았을 경우
 
     def get(self, request):  # 에러 테스트 필요함
-        if request.user.is_authenticated and request.user.group != None:  # 사용자가 인증 되었을경우
-            return Response(Article.objects.filter(group=request.user.group))
+
+        if request.user.is_authenticated:  # 사용자가 인증 되었을경우
+            try:
+                profile = Profile.objects.get(user=request.user)
+            except:
+                Profile.objects.create(user=request.user)
+                profile = Profile.objects.get(user=request.user)
+            return Response(Article.objects.filter(group=profile.group))
         return Response(status=status.HTTP_400_BAD_REQUEST)  # 인증되지 않았을 경우
 
 
@@ -70,7 +86,9 @@ def create_image(request):
         return Response(status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_401_UNAUTHORIZED)
 
-#base_dir 설정정
+# base_dir 설정정
+
+
 @api_view(['GET'])
 def image(request, pk):  # 이미지 반환
     test_file = open(
